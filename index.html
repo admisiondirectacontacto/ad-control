@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -169,6 +168,8 @@
     <button id="botonLogin" onclick="iniciarSesion()">
       INICIAR SESIÓN
     </button>
+
+    <div id="estadoLogin" class="resultado oculto" role="status" aria-live="polite"></div>
   </section>
 
   <section id="pantallaControl" class="oculto">
@@ -223,6 +224,14 @@
   const botonContinuar = document.getElementById("botonContinuar");
   const estado = document.getElementById("estado");
   const resultado = document.getElementById("resultado");
+  const estadoLogin = document.getElementById("estadoLogin");
+
+  function mostrarEstadoLogin(mensaje, tipo = "error") {
+    estadoLogin.textContent = mensaje;
+    estadoLogin.classList.remove("oculto");
+    estadoLogin.style.borderColor = tipo === "correcto" ? "#55d878" : "#e05252";
+    estadoLogin.style.color = tipo === "correcto" ? "#aaffb7" : "#ffaaaa";
+  }
 
   function mostrarEstado(mensaje, tipo = "normal") {
     estado.textContent = mensaje;
@@ -268,13 +277,14 @@
     const pin = pinInput.value.trim();
 
     if (!pin) {
-      mostrarEstado("INTRODUCE EL PIN DE ACCESO.", "aviso");
+      mostrarEstadoLogin("INTRODUCE EL PIN DE ACCESO.");
       return;
     }
 
+    estadoLogin.classList.add("oculto");
     botonLogin.disabled = true;
     botonLogin.textContent = "COMPROBANDO...";
-    
+
     try {
       const datos = await llamarAPI({
         action: "login",
@@ -282,7 +292,7 @@
       });
 
       if (!datos.ok || !datos.token) {
-        mostrarEstado(datos.mensaje || "PIN INCORRECTO.", "error");
+        mostrarEstadoLogin(datos.mensaje || "PIN INCORRECTO.");
         return;
       }
 
@@ -295,7 +305,7 @@
       mostrarEstado("SESIÓN INICIADA · LISTO PARA ESCANEAR.", "correcto");
 
     } catch (error) {
-      mostrarEstado(error.message || "NO SE PUDO CONECTAR CON EL SERVIDOR.", "error");
+      mostrarEstadoLogin(error.message || "NO SE PUDO CONECTAR CON EL SERVIDOR.");
     } finally {
       botonLogin.disabled = false;
       botonLogin.textContent = "INICIAR SESIÓN";
