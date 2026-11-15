@@ -1,0 +1,298 @@
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#111111">
+  <title>AD CONTROL | Admisión Directa</title>
+
+  <script src="https://unpkg.com/html5-qrcode"></script>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      padding: 24px 15px;
+      background: #111;
+      color: #fff;
+      font-family: Arial, sans-serif;
+      text-align: center;
+    }
+
+    .panel {
+      width: 100%;
+      max-width: 480px;
+      margin: 20px auto;
+      padding: 28px 20px;
+      background: #222;
+      border-radius: 18px;
+      border: 1px solid #383838;
+    }
+
+    .logo {
+      font-size: 29px;
+      font-weight: 900;
+      letter-spacing: 1px;
+      margin: 8px 0;
+    }
+
+    .verde {
+      color: #d7ff00;
+    }
+
+    .subtitulo {
+      color: #aaa;
+      font-size: 13px;
+      letter-spacing: 2px;
+      margin-bottom: 28px;
+    }
+
+    .separador {
+      height: 1px;
+      background: #444;
+      margin: 22px 0;
+    }
+
+    #lector {
+      width: 100%;
+      overflow: hidden;
+      border-radius: 12px;
+      margin: 20px auto;
+      background: #111;
+    }
+
+    #lector video {
+      border-radius: 12px;
+    }
+
+    button {
+      width: 100%;
+      padding: 16px;
+      margin-top: 12px;
+      border: none;
+      border-radius: 9px;
+      background: #d7ff00;
+      color: #111;
+      font-size: 16px;
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    button:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+
+    .secundario {
+      background: #444;
+      color: white;
+    }
+
+    #estado {
+      padding: 17px 12px;
+      margin-top: 20px;
+      background: #333;
+      border-radius: 10px;
+      font-size: 15px;
+      font-weight: bold;
+      line-height: 1.5;
+    }
+
+    #codigoLeido {
+      display: none;
+      margin-top: 15px;
+      padding: 15px;
+      background: #151515;
+      border: 1px solid #555;
+      border-radius: 9px;
+      overflow-wrap: anywhere;
+      font-size: 12px;
+      color: #d7ff00;
+      text-align: left;
+    }
+
+    .pequeno {
+      color: #999;
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    .oculto {
+      display: none;
+    }
+
+    .pie {
+      margin-top: 25px;
+      color: #666;
+      font-size: 11px;
+      letter-spacing: 1px;
+    }
+  </style>
+</head>
+
+<body>
+
+  <main class="panel">
+
+    <div class="logo">ADMISIÓN <span class="verde">DIRECTA</span></div>
+
+    <div class="subtitulo">AD CONTROL · SISTEMA DE ACCESO</div>
+
+    <div class="separador"></div>
+
+    <h2>LECTOR QR</h2>
+
+    <p class="pequeno">
+      Prueba de funcionamiento de la cámara y lectura de acreditaciones.
+    </p>
+
+    <div id="lector"></div>
+
+    <button id="iniciar" onclick="iniciarCamara()">
+      ACTIVAR CÁMARA
+    </button>
+
+    <button id="detener" class="secundario oculto" onclick="detenerCamara()">
+      DETENER CÁMARA
+    </button>
+
+    <div id="estado">
+      ESPERANDO ACTIVACIÓN DE LA CÁMARA
+    </div>
+
+    <div id="codigoLeido"></div>
+
+    <button id="continuar" class="oculto" onclick="continuarEscaneando()">
+      ESCANEAR OTRO QR
+    </button>
+
+    <div class="pie">
+      ADMISIÓN DIRECTA · CONTROL OFICIAL
+    </div>
+
+  </main>
+
+  <script>
+    let lectorQR = null;
+    let camaraActiva = false;
+    let esperandoLectura = false;
+
+    const estado = document.getElementById("estado");
+    const botonIniciar = document.getElementById("iniciar");
+    const botonDetener = document.getElementById("detener");
+    const botonContinuar = document.getElementById("continuar");
+    const codigoLeido = document.getElementById("codigoLeido");
+
+    function mostrarEstado(mensaje, correcto = false) {
+      estado.textContent = mensaje;
+      estado.style.background = correcto ? "#174b28" : "#333";
+      estado.style.color = correcto ? "#aaffb7" : "#fff";
+    }
+
+    async function iniciarCamara() {
+      botonIniciar.disabled = true;
+      mostrarEstado("INICIANDO CÁMARA...");
+
+      try {
+        if (typeof Html5Qrcode === "undefined") {
+          throw new Error("No se ha podido cargar el lector QR.");
+        }
+
+        lectorQR = new Html5Qrcode("lector");
+
+        await lectorQR.start(
+          { facingMode: "environment" },
+          {
+            fps: 10,
+            qrbox: function(ancho, alto) {
+              const lado = Math.floor(Math.min(ancho, alto) * 0.75);
+              return { width: lado, height: lado };
+            },
+            aspectRatio: 1
+          },
+          alLeerQR,
+          function() {}
+        );
+
+        camaraActiva = true;
+        botonIniciar.classList.add("oculto");
+        botonDetener.classList.remove("oculto");
+
+        mostrarEstado("CÁMARA ACTIVA · ESPERANDO CÓDIGO QR", true);
+
+      } catch (error) {
+        console.error(error);
+
+        mostrarEstado(
+          "NO SE PUDO ACTIVAR LA CÁMARA. Comprueba los permisos del navegador."
+        );
+
+        botonIniciar.disabled = false;
+      }
+    }
+
+    function alLeerQR(texto) {
+      if (esperandoLectura) return;
+
+      esperandoLectura = true;
+
+      try {
+        lectorQR.pause(true);
+      } catch (error) {}
+
+      codigoLeido.style.display = "block";
+      codigoLeido.textContent = "CONTENIDO DEL QR\n\n" + texto;
+
+      mostrarEstado("¡QR LEÍDO CORRECTAMENTE!", true);
+
+      botonContinuar.classList.remove("oculto");
+    }
+
+    async function continuarEscaneando() {
+      codigoLeido.style.display = "none";
+      botonContinuar.classList.add("oculto");
+
+      esperandoLectura = false;
+
+      if (lectorQR && camaraActiva) {
+        try {
+          lectorQR.resume();
+          mostrarEstado("CÁMARA ACTIVA · ESPERANDO SIGUIENTE QR", true);
+        } catch (error) {
+          mostrarEstado("NO SE PUDO REANUDAR EL LECTOR.");
+        }
+      }
+    }
+
+    async function detenerCamara() {
+      if (lectorQR && camaraActiva) {
+        try {
+          await lectorQR.stop();
+          lectorQR.clear();
+        } catch (error) {
+          console.error(error);
+        }
+      }
+
+      lectorQR = null;
+      camaraActiva = false;
+      esperandoLectura = false;
+
+      botonIniciar.disabled = false;
+      botonIniciar.classList.remove("oculto");
+      botonDetener.classList.add("oculto");
+      botonContinuar.classList.add("oculto");
+
+      codigoLeido.style.display = "none";
+
+      mostrarEstado("CÁMARA DETENIDA");
+    }
+  </script>
+
+</body>
+</html>
