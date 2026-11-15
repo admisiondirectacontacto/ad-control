@@ -25,7 +25,11 @@ export default {
       try {
         const datos = await request.json();
 
-        const accionesPermitidas = ["login", "validate", "logout"];
+        const accionesPermitidas = [
+          "login",
+          "validate",
+          "logout"
+        ];
 
         if (!accionesPermitidas.includes(datos.action)) {
           return respuesta({
@@ -59,13 +63,16 @@ export default {
 
         try {
           resultado = JSON.parse(texto);
+
         } catch (error) {
           return respuesta({
             ok: false,
-            mensaje: "GOOGLE NO HA DEVUELTO UNA RESPUESTA JSON.",
-            detalle: texto.substring(0, 500),
+            mensaje:
+              "GOOGLE NO HA DEVUELTO JSON. DETALLE: " +
+              texto.substring(0, 500),
             estadoHTTP: respuestaGoogle.status,
-            tipoContenido: respuestaGoogle.headers.get("Content-Type")
+            tipoContenido:
+              respuestaGoogle.headers.get("Content-Type")
           }, 502);
         }
 
@@ -83,6 +90,7 @@ export default {
     return env.ASSETS.fetch(request);
   }
 };
+
 
 function respuesta(datos, estado) {
   return new Response(JSON.stringify(datos), {
